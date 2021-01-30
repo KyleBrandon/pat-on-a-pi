@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Sets up your Raspberry Pi for use with Pat winlink client and Ardop. (Telnet also works.)
 # I've not attempted to get this going with Winmor, as that protocol seems to be phased out or soon to be phased out on most gateways at the time of this writing.
 # I've not attempted Pactor due to the cost. I've not attempted VARA. (It's not documented as an option for Pat, and I'm not even sure whether it works/has been ported to *nix.)
@@ -16,28 +14,50 @@ sudo apt update;
 echo;
 echo 'Downloading run helper scripts...';
 mkdir -p ${HOME}/bin;
-wget -O ${HOME}/bin/run_pat.sh https://raw.githubusercontent.com/CarpeNoctem/pat-on-a-pi/main/run_pat.sh;
+wget -O ${HOME}/bin/run_pat.sh https://raw.githubusercontent.com/KyleBrandon/pat-on-a-pi/main/run_pat.sh;
 chmod u+x ${HOME}/bin/run_pat.sh;
-wget -O ${HOME}/Desktop/runpat.desktop https://raw.githubusercontent.com/CarpeNoctem/pat-on-a-pi/main/runpat.desktop
-wget -O /tmp/gps_time_setup.sh https://raw.githubusercontent.com/CarpeNoctem/ham-utils/main/gps_time_setup.sh
+wget -O ${HOME}/Desktop/runpat.desktop https://raw.githubusercontent.com/KyleBrandon/pat-on-a-pi/main/runpat.desktop
+wget -O /tmp/gps_time_setup.sh https://raw.githubusercontent.com/KyleBrandon/ham-utils/main/gps_time_setup.sh
 chmod u+x /tmp/gps_time_setup.sh
 
 echo;
 echo 'Installing hamlib (rigctl) and gpsd...';
-sudo apt install -y libhamlib-utils gpsd;
+sudo apt install -y gpsd;
+if [ -f "/usr/local/bin/rigctl" ]; then
+   echo 'hamlib installed';
+else
+    # pull down hamlib 4.0 for the IC-705
+    wget https://sourceforge.net/projects/hamlib/files/hamlib/4.0/hamlib-4.0.tar.gz
+    tar -xzf hamlib-4.0.tar.gz
+    cd hamlib-4.0
+    ./configure
+    make
+    sudo make install
+    sudo ldconfig
+    cd ..
+fi
+
 
 echo;
 echo 'Downloading and installing Ardop TNC (beta)...';
-wget -O /tmp/ardopc http://www.cantab.net/users/john.wiseman/Downloads/Beta/piardopc;
-sudo install /tmp/ardopc /usr/local/bin;
-if [ "$(grep 'pcm\.ARDOP' ${HOME}/.asoundrc |wc -l)" -lt "1" ]; then
-  echo 'pcm.ARDOP {type rate slave {pcm "hw:CARD=CODEC,DEV=0" rate 48000}}' >> ${HOME}/.asoundrc;
+if [ -f ${HOME}/.asoundrc ]; then
+    echo 'Ardop exists';
+else
+    wget -O /tmp/ardopc http://www.cantab.net/users/john.wiseman/Downloads/Beta/piardopc;
+    sudo install /tmp/ardopc /usr/local/bin;
+    if [ "$(grep 'pcm\.ARDOP' ${HOME}/.asoundrc |wc -l)" -lt "1" ]; then
+        echo 'pcm.ARDOP {type rate slave {pcm "hw:CARD=CODEC,DEV=0" rate 48000}}' >> ${HOME}/.asoundrc;
+    fi
 fi
 
 echo;
 echo 'Downloading and Installing Pat (pre-release 0.10.0)...';
-wget -O /tmp/pat_0.10.0_linux_armhf.deb https://github.com/la5nta/pat/releases/download/v0.10.0/pat_0.10.0_linux_armhf.deb;
-sudo dpkg -i /tmp/pat_0.10.0_linux_armhf.deb;
+if [ -f "/usr/bin/pat" ]; then
+    echo 'pat installed';
+else
+    wget -O /tmp/pat_0.10.0_linux_armhf.deb https://github.com/la5nta/pat/releases/download/v0.10.0/pat_0.10.0_linux_armhf.deb;
+    sudo dpkg -i /tmp/pat_0.10.0_linux_armhf.deb;
+fi
 
 echo;
 echo 'Configuring Pat...';
@@ -47,7 +67,7 @@ if [ -e "${HOME}/.wl2k/config.json" ]; then
   echo '(Note that run_pat.sh may not work as intended if you use an existing config.)';
   read continue;
 fi;
-wget -O ${HOME}/.wl2k/config.json https://raw.githubusercontent.com/CarpeNoctem/pat-on-a-pi/main/pat_config.json;
+wget -O ${HOME}/.wl2k/config.json https://raw.githubusercontent.com/KyleBrandon/pat-on-a-pi/main/pat_config.json;
 
 read -p 'Enter your callsign: ' callsign;
 sed -i "s/YourCallsignHere/${callsign}/" ${HOME}/.wl2k/config.json;

@@ -6,7 +6,7 @@
   "service_codes": [
     "PUBLIC"
   ],
-  "http_addr": "localhost:8080",
+  "http_addr": "0.0.0.0:8080",
   "motd": [
     "Open source Winlink client - getpat.io"
   ],
@@ -24,7 +24,7 @@
       "message": "Winlink P2P",
       "destination": "IDENT"
     },
-    "rig": ""
+    "rig": "ic705"
   },
   "serial-tnc": {
     "path": "/dev/ttyACM0",

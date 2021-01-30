@@ -6,22 +6,27 @@
 # Drive level into rig. Adjust if neccessary to get the ALC meter on your rig at around 30%.
 OUTPUT_VOL='59%'
 
-RIG='373' # IC-7300 (& IC-705, but change the CI-V address in your 705 to 94.
 # run `rigctl -l` to find a list of other radio models and swap the 373 here with that number.
 # Note that this script was writtin for and currently only supports the IC-705.
 # You'll need to additionally update your Ardop config and also your ~/.wl2k/config.json file to use a different rig.
+RIG='3085' # IC-705
 
+# run ls -l /dev/serial/by-id to determine the '/dev/ttyXXX' that your rig and GPS are assigned to
+RIG_SERIAL='/dev/ttyACM0'
+GPS_SERIAL='/dev/ttyACM1'
 BAUD=9600
 
 echo 'Initiating connection with rig...';
-rigctl -m ${RIG} -r /dev/ttyACM0 -s ${BAUD} f >/dev/null 2>&1
+rigctl -m ${RIG} -r ${RIG_SERIAL} -s ${BAUD} f >/dev/null 2>&1
 if [ "$?" -ne "0" ]; then
-  echo 'Could not initiate connection with rig on /dev/ttyACM0. Is it plugged in, with the correct CI-V address set?';
+  echo 'Could not initiate connection with rig on' ${RIG_SERIAL} '. Is it plugged in, with the correct CI-V address set?';
+  echo 'Identify RIG by running 'rigctl -l' find your radio and rig identifier. Verify the RIG variable in run_pat.sh';
+  echo 'Identify the serial device for your rig and GPS by running 'ls -l /dev/serial/by-id' update the RIG_SERIAL and GPS_SERIAL variables in run_path.sh with the correct values.';
   read -p 'Hit Enter or close this terminal window.' k; #TODO: Only show these prompts when launched from desktop
   echo 'Exiting.';
   exit;
 fi
-rigctld -m ${RIG} -r /dev/ttyACM0 -s ${BAUD} > /tmp/rigctl.log &
+rigctld -m ${RIG} -r ${RIG_SERIAL} -s ${BAUD} > /tmp/rigctl.log &
 sleep 1;
 
 echo 'Initiating Ardop TNC...';
@@ -40,11 +45,11 @@ amixer -c ${CARDNUM} set PCM ${OUTPUT_VOL} > /dev/null
 ardopc > /tmp/ardopc.log &
 sleep 1;
 
-# IC-705 provides GPS on ttyACM1. TODO: This will need to be made dynamic later for other devices.
+# IC-705 provides GPS on ${GPS_SERIAL} TODO: This will need to be made dynamic later for other devices.
 echo 'Starting gpsd...';
 sudo service gpsd stop;
 sudo killall gpsd;
-gpsd /dev/ttyACM1;
+gpsd ${GPS_SERIAL};
 
 echo;
 uimode=1
@@ -84,5 +89,5 @@ echo 'Cleaning up...';
 killall pat;
 killall ardopc;
 killall rigctld;
-rigctl -m ${RIG} -r /dev/ttyACM0 -s ${BAUD} T 0 #ensure we stop TX if it got stuck
+rigctl -m ${RIG} -r ${RIG_SERIAL} -s ${BAUD} T 0 #ensure we stop TX if it got stuck
 
